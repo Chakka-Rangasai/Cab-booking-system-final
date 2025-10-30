@@ -1,0 +1,71 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    compatibility-verifier:
+      enabled: false
+    gateway:
+      discovery:
+        locator:
+          enabled: false
+          lower-case-service-id: true
+      routes:
+        # User Service Routes with /api prefix
+        - id: user-service-api
+          uri: http://localhost:8088
+          predicates:
+            - Path=/api/user/**
+          filters:
+            - RewritePath=/api/user/(?<path>.*), /user/$\{path}
+
+        # Direct User Service Routes (no prefix)
+        - id: user-service-direct
+          uri: http://localhost:8088
+          predicates:
+            - Path=/user/**
+          filters:
+            - StripPrefix=0
+
+        # Booking Service Routes
+        - id: booking-service
+          uri: http://localhost:8089
+          predicates:
+            - Path=/api/bookings/**
+          filters:
+            - RewritePath=/api/bookings/(?<path>.*), /ride/$\{path}
+
+        # Driver Service Routes
+        - id: driver-service
+          uri: http://localhost:8087
+          predicates:
+            - Path=/api/driver/**
+          filters:
+            - RewritePath=/api/driver/(?<path>.*), /driver/$\{path}
+
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.web: DEBUG
