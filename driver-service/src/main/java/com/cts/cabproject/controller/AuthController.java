@@ -1,6 +1,7 @@
 package com.cts.cabproject.controller;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,10 +36,9 @@ public class AuthController {
         Driver driver = driverService.validateDriverLogin(email, password);
         if (driver != null) {
 
-            Map<String, Object> claims = new HashMap<>();
-            claims.put("role", "ROLE_DRIVER");
+           List<String> roles= List.of("ROLE_DRIVER");
 
-            String token = jwtUtil.generateToken(email,claims);
+            String token = jwtUtil.generateToken(email,roles);
             return ResponseEntity.ok(Map.of("token", token, "driver", driver));
         } else {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");

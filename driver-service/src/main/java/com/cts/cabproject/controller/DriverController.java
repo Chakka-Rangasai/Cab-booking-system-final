@@ -1,6 +1,7 @@
 package com.cts.cabproject.controller;
 
 import com.cts.cabproject.dto.RideDetailsDto;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -41,7 +42,7 @@ public class DriverController {
   
     // Protected endpoints - require JWT authentication
     @PreAuthorize("isAuthenticated()")
-    @PatchMapping("/{driverId}/{isAvailable}")
+    @PatchMapping("check/{driverId}/{isAvailable}")
     public ResponseEntity<String>  toggleAvailability(@PathVariable Long driverId, @PathVariable boolean isAvailable) {
         driverService.updateAvailability(driverId, isAvailable);
         return ResponseEntity.ok("Availability updated");
@@ -55,22 +56,44 @@ public class DriverController {
     public ResponseEntity<Map<String, String>> updatePassword(@RequestBody Driver driverNewPassword) {
         return driverService.updateNewPassword(driverNewPassword);
     }
-    @GetMapping ("/acceptride/{requestId}/{driverId}")
-    public ResponseEntity<RideDetailsDto> acceptRide(@PathVariable Long requestId, @PathVariable Long driverId){
-             return driverService.acceptRide(requestId,driverId);
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping ("/acceptride/{requestId}/{driverId}")
+    public ResponseEntity<RideDetailsDto> acceptRide(HttpServletRequest request, @PathVariable Long requestId, @PathVariable Long driverId){
+            String authHeader = request.getHeader("Authorization");
+             return driverService.acceptRide(authHeader,requestId,driverId);
     }
-    @GetMapping("/{driverId}/confirmed")
-    public ResponseEntity<List<RideDetailsDto>> getConfirmedRidesByDriver(@PathVariable Long driverId) {
-        List<RideDetailsDto> confirmedRides = driverService.getConfirmedRidesByDriverId(driverId);
+    @GetMapping("/{driverId}/completed")
+    public ResponseEntity<List<RideDetailsDto>> getCompletedRidesByDriver(HttpServletRequest request,@PathVariable Long driverId) {
+        String authHeader = request.getHeader("Authorization");
+        List<RideDetailsDto> confirmedRides = driverService.getCompletedRidesByDriverId(authHeader,driverId);
         return ResponseEntity.ok(confirmedRides);
     }
+
+    @GetMapping("/getdrivername/{driverId}")
+    public String getDriverNameByDriverId(@PathVariable Long driverId){
+        System.out.println("driver name fetching");
+        return  driverService.getDriverNameByDriverId(driverId);
+    }
+
     @GetMapping("/pending")
-    public List<RideDetailsDto> getPendingRides(){
-        return driverService.getPendingRides();
+    public List<RideDetailsDto> getPendingRides(HttpServletRequest request){
+        String authHeader = request.getHeader("Authorization");
+        return driverService.getPendingRides(authHeader);
     }
     @GetMapping("/{driverId}")
     public Driver getDriverById(@PathVariable Long driverId){
         return driverService.getByDriverId(driverId);
+    }
+
+    @GetMapping("/{driverId}/ongoing")
+    public ResponseEntity<List<RideDetailsDto>> getOngoingRidesByDriver(HttpServletRequest request,@PathVariable Long driverId){
+        String authHeader=request.getHeader("Authorization");
+        return driverService.getOngoingRidesByDriver(authHeader,driverId);
+    }
+    @PostMapping("/completeride/{rideId}/{driverId}")
+    public ResponseEntity<RideDetailsDto> completeRide(HttpServletRequest request,@PathVariable Long rideId, @PathVariable Long driverId){
+        String authHeader=request.getHeader("Authorization");
+        return driverService.completeRide(authHeader,rideId,driverId);
     }
 
 }

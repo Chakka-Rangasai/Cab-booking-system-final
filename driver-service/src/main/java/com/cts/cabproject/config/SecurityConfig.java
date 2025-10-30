@@ -31,9 +31,9 @@ public class SecurityConfig {
         http.csrf(csrf -> csrf.disable())
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(authz -> authz
-                .requestMatchers("/auth/login", "/register","/reviews/**","/driver/{driverId}/confirmed","/driver/**").permitAll()
-                .requestMatchers("/getProfileDetails/**", "/update").authenticated()
-                .anyRequest().permitAll())
+//                .requestMatchers("/auth/login", "/register","/reviews/**","/driver/{driverId}/confirmed","/driver/**").permitAll()
+                    .requestMatchers("/driver/getProfileDetails", "/driver/update","/driver/check/{driverId}/{isAvailable}").authenticated()
+                    .anyRequest().permitAll() )
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
@@ -41,12 +41,12 @@ public class SecurityConfig {
 
         return http.build();
     }
-    
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-    
+
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
@@ -56,7 +56,7 @@ public class SecurityConfig {
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        
+
         System.out.println("CorsConfiguration=" + configuration);
         source.registerCorsConfiguration("/**", configuration);
         return source;

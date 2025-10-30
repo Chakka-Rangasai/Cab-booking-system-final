@@ -12,15 +12,15 @@ import com.cts.user_service.exceptions.DuplicateFieldException;
 import com.cts.user_service.exceptions.ForgotPasswordVerificationException;
 import com.cts.user_service.repository.UserRepository;
 import com.cts.user_service.security.JwtUtil;
+import feign.FeignException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -40,6 +40,8 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private JwtUtil jwtUtil;
+    @Autowired
+    private AuthenticationManager authenticationManager;
 
     @Override
     public ResponseEntity<Map<String, String>> registerUser(UserDto user) {
@@ -85,33 +87,38 @@ public class UserServiceImpl implements UserService {
     public ResponseEntity<Map<String, Object>> validateLoginData(UserLoginDto loginData) {
         logger.info("Login attempt for email: {}", loginData.getEmail());
 
-        Optional<UserEntity> userPresent = userRepo.findByUserEmail(loginData.getEmail());
+        // Authenticate user using Spring Security
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(loginData.getEmail(), loginData.getPassword())
+        );
 
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        if (!authentication.isAuthenticated()) {
+            logger.error("Login failed: Authentication unsuccessful for email {}", loginData.getEmail());
+            throw new AuthenticationException("Authentication failed");
+        }
+
+        // Generate JWT token
+        String token = jwtUtil.generateJwtToken(authentication);
+
+        // Fetch user details
+        Optional<UserEntity> userPresent = userRepo.findByUserEmail(loginData.getEmail());
         if (userPresent.isEmpty()) {
-            logger.error("Login failed: User not found for email {}", loginData.getEmail());
+            logger.error("Login failed: User not found after authentication for email {}", loginData.getEmail());
             throw new AuthenticationException("User not found");
         }
 
         UserEntity user = userPresent.get();
 
-        if (!passwordEncoder.matches(loginData.getPassword(), user.getUserPassword())) {
-            logger.error("Login failed: Invalid password for email {}", loginData.getEmail());
-            throw new AuthenticationException("Invalid password");
-        }
-
-        List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_USER"));
-        Authentication authentication = new UsernamePasswordAuthenticationToken(
-                loginData.getEmail(), loginData.getPassword(), authorities);
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-
-        String token = jwtUtil.generateJwtToken(authentication);
-
+        // Prepare user data
         UserDataDto userData = new UserDataDto();
         userData.setUserId(user.getUserId());
         userData.setUserName(user.getUserName());
         userData.setUserEmail(user.getUserEmail());
         userData.setUserPhoneNumber(user.getUserPhoneNumber());
 
+        // Prepare success response
         Map<String, Object> response = new HashMap<>();
         response.put("message", "Login successful");
         response.put("token", token);
@@ -120,6 +127,7 @@ public class UserServiceImpl implements UserService {
         logger.info("Login successful for user: {}", user.getUserEmail());
         return ResponseEntity.ok(response);
     }
+
 
     @Override
     public ResponseEntity<Map<String, String>> verifyForgotPasswordCredentials(UserDto forgotPasswordCredentials) {
@@ -214,30 +222,71 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public ResponseEntity<Map<String, Object>> getConfirmedRequestsByUser(Long userId) {
+    public ResponseEntity<Map<String, Object>> getConfirmedRequestsByUser(String token, Long userId) {
         logger.info("Fetching confirmed ride requests for user ID: {}", userId);
 
-        ResponseEntity<List<RideDetailsDto>> response = rideClient.getConfirmedRequestsByUser(userId);
-        List<RideDetailsDto> confirmedRides = Optional.ofNullable(response.getBody())
-                .orElse(Collections.emptyList());
-
         Map<String, Object> responseMap = new HashMap<>();
-        responseMap.put("rides", confirmedRides);
-        responseMap.put("message", confirmedRides.isEmpty()
-                ? "There are no confirmed rides yet"
-                : "Confirmed rides found");
 
-        logger.info("Confirmed rides fetched for user ID: {}. Count: {}", userId, confirmedRides.size());
-        return ResponseEntity.ok(responseMap);
+        try {
+            ResponseEntity<List<RideDetailsDto>> response = rideClient.getConfirmedRequestsByUser(token, userId);
+            List<RideDetailsDto> confirmedRides = Optional.ofNullable(response.getBody())
+                    .orElse(Collections.emptyList());
+
+            responseMap.put("rides", confirmedRides);
+            responseMap.put("message", confirmedRides.isEmpty()
+                    ? "There are no confirmed rides yet"
+                    : "Confirmed rides found");
+
+            logger.info("Confirmed rides fetched for user ID: {}. Count: {}", userId, confirmedRides.size());
+            return ResponseEntity.ok(responseMap);
+
+        } catch (FeignException.Unauthorized e) {
+            // Log and return a clear message
+            logger.warn("401 Unauthorized: Invalid or expired token used. Token: {}", token);
+            responseMap.put("error", "Unauthorized access. Please check your credentials or token.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(responseMap);
+
+        } catch (FeignException.Forbidden e) {
+            // Log and return a clear message
+            logger.warn("403 Forbidden: Possibly sent driver token instead of user token. Token: {}", token);
+            responseMap.put("error", "Access forbidden. You do not have permission to view this resource.");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(responseMap);
+
+        } catch (FeignException e) {
+            logger.error("Error calling booking service for user ID: {}: {}", userId, e.getMessage());
+            responseMap.put("error", "Failed to fetch confirmed rides. Please try again later.");
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(responseMap);
+        }
     }
 
     @Override
-    public ResponseEntity<RideDetailsDto> createRideRequest(RideDetailsDto rideDetails) {
-        return rideClient.createRide(rideDetails);
+    public ResponseEntity<RideDetailsDto> createRideRequest(String token, RideDetailsDto rideDetails) {
+        try {
+            return rideClient.createRide(token, rideDetails);
+        } catch (FeignException.Forbidden e) {
+            // Log and return a clear message
+            logger.warn("403 Forbidden: Possibly sent driver token instead of user token. Token: {}", token);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(null); // Or return a custom error DTO
+        } catch (FeignException e) {
+            logger.error("Error calling booking service: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                    .body(null);
+        }
     }
 
+
     @Override
-    public ResponseEntity<RideDetailsDto> getConfirmedRideForUser(Long userId, Long requestId) {
-        return rideClient.getConfirmedRideForUser(userId,requestId);
+    public ResponseEntity<RideDetailsDto> getConfirmedRideForUser(String token, Long userId, Long requestId) {
+        try {
+            return rideClient.getConfirmedRideForUser(token, userId, requestId);
+        } catch (FeignException.Forbidden e) {
+            logger.warn("403 Forbidden: Unauthorized access for userId {} with token {}", userId, token);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build(); // No body, just status
+        } catch (FeignException e) {
+            logger.error("Error calling booking service for userId {}: {}", userId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).build(); // No body, just status
+        }
     }
+
 }

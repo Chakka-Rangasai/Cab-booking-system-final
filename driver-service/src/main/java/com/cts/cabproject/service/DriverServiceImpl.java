@@ -32,8 +32,8 @@ public class DriverServiceImpl implements DriverService {
     private RideBookingClient rideClient;
 
     @Override
-    public ResponseEntity<RideDetailsDto> acceptRide(Long rideId, Long driverId) {
-        return rideClient.acceptRide(rideId,driverId);
+    public ResponseEntity<RideDetailsDto> acceptRide(String token,Long rideId, Long driverId) {
+        return rideClient.acceptRide(token,rideId,driverId);
     }
 
     @Override
@@ -143,13 +143,13 @@ public class DriverServiceImpl implements DriverService {
     }
 
     @Override
-    public List<RideDetailsDto> getConfirmedRidesByDriverId(Long driverId) {
-        return rideClient.getConfirmedRidesByDriver(driverId).getBody();
+    public List<RideDetailsDto> getCompletedRidesByDriverId(String token ,Long driverId) {
+        return rideClient.getCompletedRidesByDriver(token,driverId).getBody();
     }
 
     @Override
-    public List<RideDetailsDto> getPendingRides() {
-        return rideClient.getPendingRides();
+    public List<RideDetailsDto> getPendingRides(String token) {
+        return rideClient.getPendingRides(token);
     }
 
     @Override
@@ -158,5 +158,24 @@ public class DriverServiceImpl implements DriverService {
         Driver existingDriver = driver.get();
         return existingDriver;
 
+    }
+
+    @Override
+    public String getDriverNameByDriverId(Long driverId) {
+        Optional<Driver>  driver=driverRepository.findByDriverId(driverId);
+        if(driver.isPresent()){
+            return driver.get().getFullName();
+        }
+        return null;
+    }
+
+    @Override
+    public ResponseEntity<List<RideDetailsDto>> getOngoingRidesByDriver(String token,Long driverId) {
+        return rideClient.getOngoingRidesByDriver(token,driverId);
+    }
+
+    @Override
+    public ResponseEntity<RideDetailsDto> completeRide(String token,Long rideId, Long driverId) {
+        return rideClient.completeRide(token,rideId,driverId);
     }
 }

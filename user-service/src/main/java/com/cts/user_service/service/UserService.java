@@ -17,7 +17,7 @@ public interface UserService {
     ResponseEntity<Map<String,String>> updateNewPassword(UserEntity userNewPassword);
 
     ResponseEntity<Map<String, String>> editUserProfileData(UserDto userProfile);
-    ResponseEntity<Map<String, Object>> getConfirmedRequestsByUser(Long userId);
-    ResponseEntity<RideDetailsDto> createRideRequest(RideDetailsDto rideDetails);
-    ResponseEntity<RideDetailsDto> getConfirmedRideForUser(@PathVariable Long userId, @PathVariable Long requestId);
+    ResponseEntity<Map<String, Object>> getConfirmedRequestsByUser(String token,Long userId);
+    ResponseEntity<RideDetailsDto> createRideRequest(String token,RideDetailsDto rideDetails);
+    ResponseEntity<RideDetailsDto> getConfirmedRideForUser(String token,@PathVariable Long userId, @PathVariable Long requestId);
 }

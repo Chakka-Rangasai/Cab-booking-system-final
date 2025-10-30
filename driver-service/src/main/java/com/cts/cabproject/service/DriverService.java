@@ -6,10 +6,11 @@ import java.util.Map;
 import com.cts.cabproject.dto.RideDetailsDto;
 import com.cts.cabproject.entity.Driver;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
 
 public interface DriverService {
 
-    ResponseEntity<RideDetailsDto> acceptRide(Long rideId,Long driverID);
+    ResponseEntity<RideDetailsDto> acceptRide(String token,Long rideId,Long driverID);
     Driver registerDriver(Driver driver);
     
     Driver searchByID(Long driverId);
@@ -27,7 +28,11 @@ public interface DriverService {
     Driver findDriverByEmailAndPassword(String email, String passwordHash);
     ResponseEntity<Map<String, String>> verifyForgotPasswordCredentials(Driver forgotPasswordCredentials);
     ResponseEntity<Map<String,String>> updateNewPassword(Driver driverNewPassword);
-    List<RideDetailsDto> getConfirmedRidesByDriverId(Long driverId);
-    List<RideDetailsDto> getPendingRides();
+    List<RideDetailsDto> getCompletedRidesByDriverId(String token,Long driverId);
+    List<RideDetailsDto> getPendingRides(String token);
     Driver getByDriverId(Long driverId);
+    ResponseEntity<List<RideDetailsDto>> getOngoingRidesByDriver(String token,Long driverId);
+    ResponseEntity<RideDetailsDto> completeRide(String token, Long rideId, Long driverId);
+
+    String getDriverNameByDriverId(Long driverId);
 }

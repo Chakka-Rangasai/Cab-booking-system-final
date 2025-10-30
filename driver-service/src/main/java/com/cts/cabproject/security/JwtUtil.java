@@ -3,6 +3,7 @@ package com.cts.cabproject.security;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 
 import javax.crypto.SecretKey;
@@ -20,13 +21,14 @@ import io.jsonwebtoken.SignatureAlgorithm;
 public class JwtUtil {
 
    
-    private final String SECRET_KEY = "mySecretKeyForJWTTokenGenerationAndValidation1234567890";
+    private final String SECRET_KEY = "2a138abf45a0bdba7a7a68f4ce055cd1de41eceeb0bcd43479d0709a47f7ae02fc8a683cbb90bcfa98cb2562d5bc8607";
     private SecretKey key(){
         return Keys.hmacShaKeyFor(Decoders.BASE64.decode(SECRET_KEY));
     }
-    public String generateToken(String email, Map<String, Object> claims) {
+    public String generateToken(String email, List<String> roles) {
         return Jwts.builder()
-                .setClaims(claims)
+                .claim("roles",roles)
+               // .setClaims(claims)
                 .setSubject(email)
                 .setIssuedAt(new Date())
                 .setExpiration(Date.from(Instant.now().plus(10, ChronoUnit.HOURS))) // 10 hours
