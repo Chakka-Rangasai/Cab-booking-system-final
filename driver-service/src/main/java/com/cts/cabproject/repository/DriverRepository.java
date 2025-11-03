@@ -17,7 +17,7 @@ public interface DriverRepository extends JpaRepository<Driver, Long> {
     Optional<Driver> findByLicenseNumber(String licenseNumber);
     
     @Query("SELECT d FROM Driver d WHERE d.email = :email AND d.passwordHash = :passwordHash")
-    Optional<Driver> findByEmailAndPassword(@Param("email") String email, @Param("passwordHash") String passwordHash);
+    Optional<Driver> findByEmailAndPasswordHash(@Param("email") String email, @Param("passwordHash") String passwordHash);
     
     boolean existsByEmail(String email);
     

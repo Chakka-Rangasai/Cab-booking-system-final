@@ -33,10 +33,8 @@ public class AuthServiceConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
         System.out.println("Securityconfig");
         return httpSecurity.csrf(c->c.disable())
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth->
                         auth.requestMatchers("/auth/usereditprofile").authenticated()
-                        //.requestMatchers("/auth/**").permitAll()
                                 .anyRequest().permitAll())
                 .sessionManagement(session->session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
@@ -47,20 +45,7 @@ public class AuthServiceConfig {
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-    @Bean
-    CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-       // configuration.setAllowedOrigins(Arrays.asList("http://localhost:4200"));
-        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("*"));
-        configuration.setAllowCredentials(true);
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 
-        System.out.println("CorsConfiguration="+configuration);
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
         return configuration.getAuthenticationManager();

@@ -1,8 +1,7 @@
 package com.cts.booking_service.service;
 
 import com.cts.booking_service.Entity.RideRequest;
-import com.cts.booking_service.client.DriverClient;
-import com.cts.booking_service.client.PaymentClient;
+import com.cts.booking_service.client.DriverAndPaymentClient;
 import com.cts.booking_service.dto.RideHistory;
 import com.cts.booking_service.exceptions.RideRequestNotFoundException;
 import com.cts.booking_service.repository.RideRequestRepository;
@@ -11,7 +10,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -28,9 +26,7 @@ public class RideRequestServiceImpl implements RideRequestService {
     private RideRequestRepository rideRepo;
 
     @Autowired
-    private PaymentClient paymentClient;
-    @Autowired
-    private DriverClient driverClient;
+    private DriverAndPaymentClient client;
 
     @Override
     public RideRequest saveRideDetails(RideRequest rideDetails) {
@@ -74,35 +70,45 @@ public class RideRequestServiceImpl implements RideRequestService {
         Pageable topTen = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "requestId"));
         return rideRepo.findByAcceptedDriverIdAndStatusOrderByRequestIdDesc(driverId, "COMPLETED", topTen).getContent();
     }
+    
 
+    @Override
+    public List<RideHistory> getConfirmedRequestsByUserId(String token, Long userId) {
+        List<RideRequest> details = rideRepo.findByUserIdAndStatus(userId, "COMPLETED");
+        List<RideHistory> history = new ArrayList<>();
 
-//    @Override
-//    public List<RideRequest> getConfirmedRequestsByUserId(Long userId) {
-//        logger.info("Fetching confirmed rides for user ID {}", userId);
-//        return rideRepo.findByUserIdAndStatus(userId, "CONFIRMED");
-//    }
+        if (details != null) {
+            for (RideRequest request : details) {
+                RideHistory history1 = new RideHistory();
+                history1.setAmount(request.getAmount());
+                history1.setOrigin(request.getOrigin());
+                history1.setDestination(request.getDestination());
 
-@Override
-public List<RideHistory> getConfirmedRequestsByUserId(String token,Long userId) {
-    List<RideRequest> details= rideRepo.findByUserIdAndStatus(userId,"COMPLETED");
-    List<RideHistory> history=new ArrayList<>();
-    if(details!=null){
-        for(RideRequest request:details){
-            RideHistory history1=new RideHistory();
-            history1.setAmount(request.getAmount());
-            history1.setOrigin(request.getOrigin());
-            history1.setDestination(request.getDestination());
-            List<String> paymentDetails=paymentClient.getPaymentDetailsForRide(token,request.getRequestId());
-            history1.setMethod(paymentDetails.get(1));
-            history1.setStatus(paymentDetails.get(0));
-            String driverName=driverClient.getDriverNameByDriverId(token,request.getAcceptedDriverId());
-            history1.setDriverName(driverName);
-            history.add(history1);
+                // Handle payment details safely
+                try {
+                    List<String> paymentDetails = client.getPaymentDetailsForRide(token, request.getRequestId());
+                    history1.setMethod(paymentDetails.size() > 1 ? paymentDetails.get(1) : "Unavailable");
+                    history1.setStatus(paymentDetails.size() > 0 ? paymentDetails.get(0) : "Unknown");
+                } catch (Exception e) {
+                    history1.setMethod("Unavailable");
+                    history1.setStatus("Unknown");
+                }
+
+                // Handle driver name safely
+                try {
+                    String driverName = client.getDriverNameByDriverId(token, request.getAcceptedDriverId());
+                    history1.setDriverName(driverName != null ? driverName : "null");
+                } catch (Exception e) {
+                    history1.setDriverName("null");
+                }
+
+                history.add(history1);
+            }
         }
+
         return history;
     }
-    return null;
-}
+
 
 
 
@@ -121,7 +127,7 @@ public List<RideHistory> getConfirmedRequestsByUserId(String token,Long userId) 
             throw new RideRequestNotFoundException("No confirmed ride found for user ID " + userId + " and request ID " + requestId);
         }
 
-        return rides.get(0);
+        return rides.getFirst();
     }
 
 

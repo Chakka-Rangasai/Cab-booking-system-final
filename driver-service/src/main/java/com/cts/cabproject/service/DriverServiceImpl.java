@@ -47,6 +47,7 @@ public class DriverServiceImpl implements DriverService {
         if (driverRepository.existsByLicenseNumber(driver.getLicenseNumber())) {
             throw new RuntimeException("Driver with this license number already exists");
         }
+        driver.setPasswordHash(passwordEncoder.encode(driver.getPasswordHash()));
         
         return driverRepository.save(driver);
     }
@@ -91,16 +92,23 @@ public class DriverServiceImpl implements DriverService {
         driver.setAvailable(isAvailable);
         driverRepository.save(driver);
     }
-    
-    @Override
-    public Driver validateDriverLogin(String email, String password) {
-        Optional<Driver> driverOpt = driverRepository.findByEmailAndPassword(email, password);
-        return driverOpt.orElse(null);
+
+@Override
+public Driver validateDriverLogin(String email, String password) {
+    Optional<Driver> driverOpt = driverRepository.findByEmail(email);
+    if (driverOpt.isPresent()) {
+        Driver driver = driverOpt.get();
+        if (passwordEncoder.matches(password, driver.getPasswordHash())) {
+            return driver;
+        }
     }
-    
+    return null;
+}
+
+
     @Override
     public Driver findDriverByEmailAndPassword(String email, String passwordHash) {
-        Optional<Driver> driverOpt = driverRepository.findByEmailAndPassword(email, passwordHash);
+        Optional<Driver> driverOpt = driverRepository.findByEmailAndPasswordHash(email, passwordHash);
         return driverOpt.orElse(null);
     }
 

@@ -7,19 +7,19 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@FeignClient(name="BOOKING-SERVICE")
+@FeignClient(name="api-gateway")
 public interface RideBookingClient {
-    @GetMapping("ride/pending")
+    @GetMapping("booking-api/ride/pending")
     public List<RideDetailsDto> getPendingRides(@RequestHeader("Authorization") String token);
-    @PostMapping("ride/accept/{requestId}/{driverId}")
+    @PostMapping("booking-api/ride/accept/{requestId}/{driverId}")
     public ResponseEntity<RideDetailsDto> acceptRide(@RequestHeader("Authorization") String token, @PathVariable Long requestId, @PathVariable Long driverId) ;
-    @GetMapping("ride/driver/{driverId}/completed")
+    @GetMapping("booking-api/ride/driver/{driverId}/completed")
     public ResponseEntity<List<RideDetailsDto>> getCompletedRidesByDriver(@RequestHeader("Authorization") String token,@PathVariable Long driverId) ;
 
     //new client
-    @GetMapping("ride/{driverId}/ongoing")
+    @GetMapping("booking-api/ride/{driverId}/ongoing")
     public ResponseEntity<List<RideDetailsDto>> getOngoingRidesByDriver(@RequestHeader("Authorization") String token,@PathVariable Long driverId);
 
-    @PostMapping("ride/completeride/{rideId}/{driverId}")
+    @PostMapping("booking-api/ride/completeride/{rideId}/{driverId}")
     public ResponseEntity<RideDetailsDto> completeRide(@RequestHeader("Authorization") String token,@PathVariable Long rideId, @PathVariable Long driverId);
 }

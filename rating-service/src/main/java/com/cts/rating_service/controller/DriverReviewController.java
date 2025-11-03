@@ -18,7 +18,6 @@ import com.cts.rating_service.service.DriverReviewService;
 
 @RestController
 @RequestMapping("/reviews")
-@CrossOrigin(origins = "http://localhost:4200")
 public class DriverReviewController {
     
     @Autowired

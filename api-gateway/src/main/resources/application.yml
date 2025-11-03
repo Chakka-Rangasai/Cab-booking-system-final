@@ -12,45 +12,48 @@ spring:
         locator:
           enabled: false
           lower-case-service-id: true
-      routes:
-        # User Service Routes with /api prefix
-        - id: user-service-api
-          uri: http://localhost:8088
-          predicates:
-            - Path=/api/user/**
-          filters:
-            - RewritePath=/api/user/(?<path>.*), /user/$\{path}
 
-        # Direct User Service Routes (no prefix)
-        - id: user-service-direct
+      routes:
+        # User Service Routes
+        - id: user-service
           uri: http://localhost:8088
           predicates:
-            - Path=/user/**
+            - Path=/user-api/**
           filters:
-            - StripPrefix=0
+            - StripPrefix=1
 
         # Booking Service Routes
         - id: booking-service
           uri: http://localhost:8089
           predicates:
-            - Path=/api/bookings/**
+            - Path=/booking-api/**
           filters:
-            - RewritePath=/api/bookings/(?<path>.*), /ride/$\{path}
+            - StripPrefix=1
 
         # Driver Service Routes
         - id: driver-service
           uri: http://localhost:8087
           predicates:
-            - Path=/api/driver/**
+            - Path=/driver-api/**
           filters:
-            - RewritePath=/api/driver/(?<path>.*), /driver/$\{path}
+            - StripPrefix=1
 
-      globalcors:
-        corsConfigurations:
-          '[/**]':
-            allowedOrigins: "*"
-            allowedMethods: "*"
-            allowedHeaders: "*"
+        # Payment Service Routes
+        - id: payment-service
+          uri: http://localhost:8086
+          predicates:
+            - Path=/payment-api/**
+          filters:
+            - StripPrefix=1
+
+        # Review Service Routes
+        - id: review-service
+          uri: http://localhost:8077
+          predicates:
+            - Path=/review-api/**
+          filters:
+            - StripPrefix=1
+
 
 eureka:
   client:

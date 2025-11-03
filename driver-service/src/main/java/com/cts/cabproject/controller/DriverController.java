@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@CrossOrigin//(origins = "http://localhost:4200")
 @RequestMapping("/driver")
 public class DriverController {
     
@@ -29,19 +28,19 @@ public class DriverController {
         driver.setAvailable(true);
         return ResponseEntity.ok(driverService.registerDriver(driver));
     }
-    
+    @PreAuthorize("hasRole('DRIVER')")
     @GetMapping("getProfileDetails/{DriverId}")
     public ResponseEntity<Driver> profileView(@PathVariable Long DriverId){
         return ResponseEntity.ok(driverService.searchByID(DriverId));
     }
-    
+    @PreAuthorize("hasRole('DRIVER')")
     @PostMapping("/update")
     public ResponseEntity<Driver> updateProfile(@RequestBody Driver driver){
         return ResponseEntity.ok(driverService.updateProfile(driver));
     }
   
     // Protected endpoints - require JWT authentication
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('DRIVER')")
     @PatchMapping("check/{driverId}/{isAvailable}")
     public ResponseEntity<String>  toggleAvailability(@PathVariable Long driverId, @PathVariable boolean isAvailable) {
         driverService.updateAvailability(driverId, isAvailable);
@@ -56,7 +55,6 @@ public class DriverController {
     public ResponseEntity<Map<String, String>> updatePassword(@RequestBody Driver driverNewPassword) {
         return driverService.updateNewPassword(driverNewPassword);
     }
-    @PreAuthorize("isAuthenticated()")
     @PostMapping ("/acceptride/{requestId}/{driverId}")
     public ResponseEntity<RideDetailsDto> acceptRide(HttpServletRequest request, @PathVariable Long requestId, @PathVariable Long driverId){
             String authHeader = request.getHeader("Authorization");

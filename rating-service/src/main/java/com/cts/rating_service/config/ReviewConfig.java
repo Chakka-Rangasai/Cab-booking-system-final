@@ -25,7 +25,6 @@ public class ReviewConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
         System.out.println("Securityconfig");
         return httpSecurity.csrf(c->c.disable())
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth->
                         auth.requestMatchers("/reviews/**").authenticated()
                                 //.requestMatchers("/auth/**").permitAll()
@@ -34,18 +33,5 @@ public class ReviewConfig {
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
-    @Bean
-    CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        // configuration.setAllowedOrigins(Arrays.asList("http://localhost:4200"));
-        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("*"));
-        configuration.setAllowCredentials(true);
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 
-        System.out.println("CorsConfiguration="+configuration);
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
 }
