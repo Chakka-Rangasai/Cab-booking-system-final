@@ -15,8 +15,6 @@ import java.util.*;
 public class JwtUtil {
     @Value("${key}")
     private String secretKey;
-    @Value("${expiry}")
-    private long expiry;
     private SecretKey key(){
         return Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey));
     }
